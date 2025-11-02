@@ -2,8 +2,26 @@ from collections import deque
 from typing import Set, List, Optional, Dict
 from generar_grafo import hacer_grafo, grafo_apareado
 
+def matriz_a_grafo(matriz):
+    n_filas = len(matriz)
+    n_columnas = len(matriz[0])
+
+    X = {f'x{i+1}' for i in range(n_filas)}
+    Y = {f'y{j+1}' for j in range(n_columnas)}
+    edges = {}
+
+    for i in range(n_filas):
+        conexiones = set()
+        for j in range(n_columnas):
+            if matriz[i][j] != 0:
+                conexiones.add(f'y{j+1}')
+        edges[f'x{i+1}'] = conexiones
+
+    return X, Y, edges
+
 class ApareamientoBipartito:
-    def __init__(self, X: Set, Y: Set, edges: Dict):
+    def __init__(self, matriz):
+        X, Y, edges = matriz_a_grafo(matriz)
         self.X = X
         self.Y = Y
         self.adj = edges
@@ -58,46 +76,53 @@ class ApareamientoBipartito:
         
         return None
     
-    def metodo_hungaro(self):
+    def metodo_hungaro(self, verbose=True):
         M = {} # Elegir un apareamiento M
         
         iteration = 0
         while True:
             iteration += 1
-            print(f"\n--- Iteración {iteration} ---")
-            print(f"M actual: {M}")
+            if verbose:
+                print(f"\n--- Iteración {iteration} ---")
+                print(f"M actual: {M}")
             
             # 1. Si M satura X entonces parar
-            x_no_saturado = {x for x in X if x not in M}
+            x_no_saturado = {x for x in self.X if x not in M}
             if not x_no_saturado:
-                print("M completo")
+                if verbose:
+                    print("M completo")
                 return M
             
             #   Si no u <- vértice no saturado de X
             #       S <- {u}; T <- conjunto vacio
             u = x_no_saturado.pop()
-            print(f"u = {u}")
+            if verbose:
+                print(f"u = {u}")
             S = {u}
             T = set()
             
             inner_iteration = 0
             while True:
                 inner_iteration += 1
-                print(f"\nSub-iteración {inner_iteration}:")
-                print(f"S = {S}, T = {T}")
+                if verbose:
+                    print(f"\nSub-iteración {inner_iteration}:")
+                    print(f"S = {S}, T = {T}")
                 
                 # 2. Si N(S) = T entonces |N(S)| < |S| Parar
                 N_S = self.N(S)
-                print(f"N(S) = {N_S}")
+                if verbose:
+                    print(f"N(S) = {N_S}")
                 if N_S == T:
-                    print(f"{len(N_S)} = |N(S)| < |S| = {len(S)}")
-                    print("M no perfecto")
+                    if verbose:
+                        print(f"{len(N_S)} = |N(S)| < |S| = {len(S)}")
+                        print("M no perfecto")
                     return M
                 
                 #   Si no hacer y <- un vértice de N(S)\T
                 aux = N_S - T
                 y = aux.pop()
-                print(f"{y} ∈ N(S)\\T")
+                if verbose:
+                    print(f"{y} ∈ N(S)\\T")
                 
                 # 3. Si y es M-saturado entonces
                 #       1. Sea yz pertenece a M;
@@ -105,25 +130,28 @@ class ApareamientoBipartito:
                 #       3. T <- T union {y};   Ir a 2
                 if y in M:
                     z = M[y]
-                    print(f"z = {z}")
                     S = S | {z}
                     T = T | {y}
-                    print(f"S = S union {{{z}}} = {S}")
-                    print(f"T = T union {{{y}}} = {T}")
+                    if verbose:
+                        print(f"z = {z}")
+                        print(f"S = S union {{{z}}} = {S}")
+                        print(f"T = T union {{{y}}} = {T}")
                 #   Si no  P: un M-(u,y)-camino aumentante
                 #       1. M <- M exclusion P;    Ir a 1
                 else:
                     P = self.camino_aumentante(u, y, M)
                     if P:
-                        print(f"Camino aumentante: {P}")
                         for i in range(0, len(P)-1, 2):
                             x = P[i]
                             y = P[i+1]
                             M[x] = y
                             M[y] = x
-                        print(f"Nuevo M después de aumentar: {M}")
+                        if verbose:
+                            print(f"Camino aumentante: {P}")
+                            print(f"Nuevo M después de aumentar: {M}")
                     else:
-                        print("ERROR: No se encontró camino aumentante")
+                        if verbose:
+                            print("ERROR: No se encontró camino aumentante")
                     break
 
 if __name__ == "__main__":
@@ -184,45 +212,56 @@ if __name__ == "__main__":
     } # N(X)
     '''
 
-    X = {f'x{i}' for i in range(1, 11)} # conjunto X
-    Y = {f'y{i}' for i in range(1, 11)} # conjunto Y
-    edges = {
-        'x1': ['y1', 'y2', 'y3', 'y4'],
-        'x2': ['y1', 'y4', 'y5', 'y7'],
-        'x3': ['y2', 'y5', 'y6', 'y8'],
-        'x4': ['y1', 'y3', 'y6', 'y9'],
-        'x5': ['y3', 'y4', 'y7', 'y10'],
-        'x6': ['y2', 'y5', 'y8', 'y9'],
-        'x7': ['y4', 'y6', 'y7', 'y10'],
-        'x8': ['y5', 'y8', 'y9', 'y10'],
-        'x9': ['y1', 'y2', 'y6', 'y8'],
-        'x10': ['y3', 'y5', 'y7', 'y9']
-    } # N(X)
+    '''
+    matriz = [
+        [3, 5, 5, 4, 1],
+        [2, 2, 0, 2, 2],
+        [2, 4, 4, 1, 0],
+        [0, 1, 1, 0, 0],
+        [1, 2, 1, 3, 3]
+    ]
+    '''
 
-    hacer_grafo(X, Y, edges, "grafo_inicial")
-    print("\n=== Metodo Hungaro ===")
-    print(f"Conjunto X: {X}")
-    print(f"Conjunto Y: {Y}")
-    print("Aristas:")
-    for x in sorted(X):
-        print(f"{x}: {edges[x]}")
+    matriz = [
+        [3, 5, 5, 0, 0, 0, 0],
+        [0, 5, 0, 3, 0, 0, 0],
+        [1, 0, 0, 5, 4, 0, 0],
+        [0, 0, 5, 0, 3, 0, 4],
+        [0, 0, 0, 5, 0, 1, 2],
+        [0, 0, 0, 0, 3, 0, 2],
+        [2, 0, 0, 0, 0, 0, 3]
+    ]
+
+    verbose = False
+    X, Y, edges = matriz_a_grafo(matriz)
+    hacer_grafo(matriz, len(X), "grafo_inicial")
+
+    if verbose:
+        print("\n=== Metodo Hungaro ===")
+        print(f"Conjunto X: {X}")
+        print(f"Conjunto Y: {Y}")
+        print("Aristas:")
+        for x in sorted(X):
+            print(f"{x}: {edges[x]}")
     
-    bipartito = ApareamientoBipartito(X, Y, edges)
-    M = bipartito.metodo_hungaro()
+    M = ApareamientoBipartito(matriz).metodo_hungaro(verbose)
     
-    grafo_apareado(X, Y, edges, M, "grafo_apareado")
+    grafo_apareado(matriz, len(X), M, "grafo_apareado")
     
-    print("\n" + "="*50)
-    print("Resultado:")
-    parejas = []
-    for x in sorted(X):
-        if x in M:
-            parejas.append(f"{x} -- {M[x]}")
-        else:
-            parejas.append(f"{x} -- No emparejado")
-    
-    for pareja in parejas:
-        print(f"{pareja}")
+    if verbose:
+        print("\n" + "="*50)
+        print("Resultado:")
+        print(M)
+        parejas = []
+        for x in sorted(X):
+            if x in M:
+                parejas.append(f"{x} -- {M[x]}")
+            else:
+                parejas.append(f"{x} -- No emparejado")
+        
+        for pareja in parejas:
+            print(f"{pareja}")
     
     matched_count = len([x for x in X if x in M])
-    print("Apareamiento perfecto" if matched_count == len(X) else "Apareamiento no perfecto")
+    if verbose:
+        print("Apareamiento perfecto" if matched_count == len(X) else "Apareamiento no perfecto")
